@@ -45,7 +45,7 @@
   >
   <meta
     name="twitter:image"
-    content="https://placehold.co/1200x630/00bcd4/ffffff?text=Countdown+Service"
+    content="https://countdown-cni.pages.dev/og.jpg"
   >
 
   <!-- Tailwind CSS CDN for styling -->
@@ -145,6 +145,29 @@
         opacity: 0;
       }
     }
+
+    /* Help Modal Styles */
+    #help-modal-content h3 {
+      font-size: 1.25rem;
+      font-weight: bold;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      padding-bottom: 0.25rem;
+    }
+
+    #help-modal-content p,
+    #help-modal-content li {
+      font-family: sans-serif;
+      /* Use a more readable font for text blocks */
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    #help-modal-content ul {
+      list-style-type: disc;
+      margin-left: 1.5rem;
+    }
   </style>
 </head>
 
@@ -226,7 +249,15 @@
         id="config-panel"
         class="mt-8"
       >
-        <div class="bg-white/10 p-4 md:p-6 rounded-xl shadow-xl backdrop-blur-sm w-full max-w-2xl mx-auto">
+        <div class="relative bg-white/10 p-4 md:p-6 rounded-xl shadow-xl backdrop-blur-sm w-full max-w-2xl mx-auto">
+          <!-- Help Button -->
+          <button
+            id="help-button"
+            class="absolute top-3 right-3 text-white/50 hover:text-white/80 transition-colors"
+          >
+            <i class="fas fa-question-circle fa-lg"></i>
+          </button>
+
           <!-- Basic Inputs -->
           <div id="basic-inputs">
             <div class="flex items-center justify-center gap-2 mb-4">
@@ -389,6 +420,70 @@
     </button>
   </div>
 
+  <!-- Help Modal -->
+  <div
+    id="help-modal"
+    class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 hidden"
+  >
+    <div class="bg-gray-800 text-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+      <div class="flex justify-between items-center p-4 border-b border-gray-700">
+        <h2 class="text-2xl font-bold">User Guide</h2>
+        <button
+          id="close-help-button"
+          class="text-2xl hover:text-gray-400"
+        >&times;</button>
+      </div>
+      <div
+        id="help-modal-content"
+        class="p-6 overflow-y-auto text-left"
+      >
+        <h3>Basic Countdown</h3>
+        <p>To start a simple countdown, enter the desired duration in the "Hours", "Minutes", and "Seconds" fields on
+          the main screen and press "Start Countdown".</p>
+
+        <h3>Customization</h3>
+        <ul>
+          <li><strong>Background Image:</strong> Click "Choose Background Image" to select an image from your device.
+            This background will be saved for your next visit. You can also change it during a live countdown using the
+            camera icon <i class="fas fa-camera"></i>.</li>
+          <li><strong>Final Message:</strong> Type a custom message in the "Message to display at the end" box. This
+            message will appear when the countdown finishes.</li>
+        </ul>
+
+        <h3>Advanced Settings (Checkpoints)</h3>
+        <p>For complex timers, you can use Checkpoints. Click "Advanced Settings" to switch to this mode.</p>
+        <ul>
+          <li><strong>Adding a Checkpoint:</strong> Click "+ Add Checkpoint". A new row will appear.</li>
+          <li><strong>Configuring a Checkpoint:</strong> In each row, enter a name for the checkpoint and its specific
+            duration (h, m, s). The total countdown time will be the sum of all checkpoint durations.</li>
+          <li><strong>Removing a Checkpoint:</strong> Click the red '×' button on the right of any checkpoint row to
+            delete it.</li>
+          <li><strong>Resetting:</strong> Click "Reset All" to clear all checkpoints you've created.</li>
+          <li><strong>Switching Modes:</strong> When in Advanced Mode, the timer uses the checkpoint list. To use the
+            simple duration fields again, click "Back to Basic". The app will remember your checkpoints if you switch
+            back to Advanced Mode later.</li>
+        </ul>
+
+        <h3>Warning Time</h3>
+        <p>In Advanced Settings, you can set a "Warning Time". Before each checkpoint ends, the timer will start glowing
+          red and beeping for the duration you set here (default is 10 seconds).</p>
+
+        <h3>In-Countdown Controls</h3>
+        <ul>
+          <li><strong>Stop Countdown:</strong> Stops the current timer completely and resets all settings.</li>
+          <li><strong>Change Background <i class="fas fa-camera"></i>:</strong> Opens a file dialog to select a new
+            background image without stopping the timer.</li>
+          <li><strong>Fullscreen <i class="fas fa-expand"></i>:</strong> Toggles fullscreen mode for an immersive
+            experience. This button appears at the bottom-right during a countdown.</li>
+        </ul>
+
+        <h3>Data Persistence</h3>
+        <p>All your settings, including the timer's end time, checkpoints, and customizations, are automatically saved
+          in your browser. If you reload the page, the countdown will resume exactly where it left off.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- Audio element for the beep sound -->
   <audio
     id="beep-sound"
@@ -433,6 +528,11 @@
     const basicInputs = document.getElementById('basic-inputs')
     const warningMinutesInput = document.getElementById('warning-minutes')
     const warningSecondsInput = document.getElementById('warning-seconds')
+
+    // Help Modal Elements
+    const helpButton = document.getElementById('help-button')
+    const helpModal = document.getElementById('help-modal')
+    const closeHelpButton = document.getElementById('close-help-button')
 
 
     const hoursElement = document.getElementById('hours')
@@ -783,6 +883,15 @@
     countdownSecondsInput.addEventListener('input', updateDisplayFromInput)
     finalTextInput.addEventListener('input', () => {
       saveToLocalStorage({ finalText: finalTextInput.value })
+    })
+
+    // Help Modal Listeners
+    helpButton.addEventListener('click', () => helpModal.classList.remove('hidden'))
+    closeHelpButton.addEventListener('click', () => helpModal.classList.add('hidden'))
+    helpModal.addEventListener('click', (e) => {
+      if (e.target === helpModal) {
+        helpModal.classList.add('hidden')
+      }
     })
 
     document.addEventListener('mousedown', () => { hasInteracted = true }, { once: true })

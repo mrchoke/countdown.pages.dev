@@ -489,13 +489,30 @@
     // --- Local Storage Functions ---
     function saveToLocalStorage (data) {
       Object.keys(data).forEach(key => {
-        localStorage.setItem(key, JSON.stringify(data[key]))
+        try {
+          // Handle null/undefined backgroundData specifically
+          if (key === 'backgroundData' && !data[key]) {
+            localStorage.removeItem('backgroundData')
+            return // continue to next key in forEach
+          }
+          localStorage.setItem(key, JSON.stringify(data[key]))
+        } catch (e) {
+          // If saving fails, check if it's the background image and a QuotaExceededError
+          if (key === 'backgroundData' && e.name === 'QuotaExceededError') {
+            console.warn('The selected background image is too large to be saved for the next session. It will not be available on page reload.')
+            // Ensure any previous large image is also removed to prevent blocking other saves
+            localStorage.removeItem('backgroundData')
+          } else {
+            // For other errors or other keys, we might still want to know
+            console.error(`Failed to save key "${key}" to localStorage:`, e)
+          }
+        }
       })
     }
 
     function loadFromLocalStorage () {
       const targetTimestamp = JSON.parse(localStorage.getItem('countdownTarget'))
-      const backgroundData = JSON.parse(localStorage.getItem('backgroundImage'))
+      const backgroundData = JSON.parse(localStorage.getItem('backgroundData'))
       const finalText = JSON.parse(localStorage.getItem('finalText')) || 'END!!'
       const checkpoints = JSON.parse(localStorage.getItem('checkpoints'))
       const checkpointEndTimes = JSON.parse(localStorage.getItem('checkpointEndTimes'))
@@ -505,7 +522,7 @@
 
     function clearLocalStorage () {
       localStorage.removeItem('countdownTarget')
-      localStorage.removeItem('backgroundImage')
+      localStorage.removeItem('backgroundData')
       localStorage.removeItem('finalText')
       localStorage.removeItem('checkpoints')
       localStorage.removeItem('checkpointEndTimes')
@@ -677,15 +694,22 @@
 
     startButton.addEventListener('click', () => {
       hasInteracted = true
-      let checkpoints = getCheckpointsFromUI()
+      let checkpoints = []
+      const isInAdvancedMode = !advancedConfigPanel.classList.contains('hidden')
 
-      if (checkpoints.length === 0) {
+      if (isInAdvancedMode) {
+        checkpoints = getCheckpointsFromUI()
+        if (checkpoints.length === 0) {
+          alert('Please add at least one checkpoint in Advanced Mode, or switch back to Basic Mode.')
+          return
+        }
+      } else {
         const h = parseInt(countdownHoursInput.value) || 0
         const m = parseInt(countdownMinutesInput.value) || 0
         const s = parseInt(countdownSecondsInput.value) || 0
         const duration = (h * 3600 + m * 60 + s) * 1000
         if (duration <= 0) {
-          alert('Please set a duration or add at least one checkpoint.')
+          alert('Please set a duration.')
           return
         }
         checkpoints.push({ name: '', duration })
@@ -708,18 +732,22 @@
       const warningTimeMs = (warningM * 60 + warningS) * 1000
 
       const startData = { targetTimestamp, finalText, checkpoints, checkpointEndTimes, showHours, warningTimeMs }
+      const storageData = { ...startData, warningTime: { m: warningM, s: warningS } }
+      delete storageData.warningTimeMs // Don't need to store this calculated value
 
       if (file) {
         const reader = new FileReader()
         reader.onload = (e) => {
           startData.backgroundData = e.target.result
-          saveToLocalStorage({ ...startData, warningTime: { m: warningM, s: warningS } })
+          storageData.backgroundData = e.target.result
+          saveToLocalStorage(storageData)
           startCountdown(startData)
         }
         reader.readAsDataURL(file)
       } else {
-        startData.backgroundData = JSON.parse(localStorage.getItem('backgroundImage'))
-        saveToLocalStorage({ ...startData, warningTime: { m: warningM, s: warningS } })
+        startData.backgroundData = JSON.parse(localStorage.getItem('backgroundData'))
+        storageData.backgroundData = startData.backgroundData
+        saveToLocalStorage(storageData)
         startCountdown(startData)
       }
     })
@@ -731,7 +759,8 @@
         reader.onload = (e) => {
           const backgroundData = e.target.result
           body.style.backgroundImage = `url(${backgroundData})`
-          localStorage.setItem('backgroundImage', JSON.stringify(backgroundData))
+          // Use the robust save function to handle potential quota errors
+          saveToLocalStorage({ backgroundData: backgroundData })
         }
         reader.readAsDataURL(file)
       }
@@ -753,7 +782,7 @@
     countdownMinutesInput.addEventListener('input', updateDisplayFromInput)
     countdownSecondsInput.addEventListener('input', updateDisplayFromInput)
     finalTextInput.addEventListener('input', () => {
-      localStorage.setItem('finalText', JSON.stringify(finalTextInput.value))
+      saveToLocalStorage({ finalText: finalTextInput.value })
     })
 
     document.addEventListener('mousedown', () => { hasInteracted = true }, { once: true })
@@ -787,13 +816,14 @@
 
       if (data.targetTimestamp && data.targetTimestamp > new Date().getTime()) {
         hasInteracted = true
-        const totalDuration = data.checkpoints.reduce((acc, cp) => acc + cp.duration, 0)
+        const totalDuration = data.checkpoints ? data.checkpoints.reduce((acc, cp) => acc + cp.duration, 0) : (data.targetTimestamp - new Date().getTime())
         data.showHours = totalDuration >= 3600000
         const warningM = data.warningTime ? data.warningTime.m : 0
         const warningS = data.warningTime ? data.warningTime.s : 10
         data.warningTimeMs = (warningM * 60 + warningS) * 1000
         startCountdown(data)
       } else {
+        clearLocalStorage() // Clear any expired countdown data
         startRealTimeClock()
       }
     });

@@ -55,24 +55,16 @@
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
   >
-  <!-- Google Fonts for Seven-Segment style numbers -->
+  <!-- DSEG7 seven-segment display font (served via jsDelivr CDN) -->
   <link
     rel="preconnect"
-    href="https://fonts.googleapis.com"
-  >
-  <link
-    rel="preconnect"
-    href="https://fonts.gstatic.com"
+    href="https://cdn.jsdelivr.net"
     crossorigin
-  >
-  <link
-    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap"
-    rel="stylesheet"
   >
   <style>
     /* Main styling for the entire screen */
     body {
-      font-family: 'Orbitron', sans-serif;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       background-size: cover;
       background-position: center;
       transition: background-image 0.5s ease-in-out;
@@ -89,7 +81,8 @@
     .countdown-number {
       font-size: clamp(4rem, 15vw, 15rem);
       /* Adjusts size to be as large as possible */
-      text-shadow: 0 0 20px #00FFFF, 0 0 30px #00FFFF, 0 0 40px #00FFFF;
+      color: var(--number-color, #00ffff);
+      text-shadow: 0 0 20px var(--glow-color, #00ffff), 0 0 30px var(--glow-color, #00ffff), 0 0 40px var(--glow-color, #00ffff);
       /* Glow effect */
       line-height: 1;
       /* Adjust line-height for better fit */
@@ -100,6 +93,8 @@
       /* Dynamic label size */
       text-transform: uppercase;
       letter-spacing: 0.1em;
+      margin-top: 1.5rem;
+      /* Space between the digits and the label */
     }
 
     /* Animation for the red glowing/blinking effect */
@@ -168,6 +163,174 @@
       list-style-type: disc;
       margin-left: 1.5rem;
     }
+
+    /* ===== DSEG7 Seven-Segment Display Font ===== */
+    @font-face {
+      font-family: 'DSEG7-Classic';
+      src: url('https://cdn.jsdelivr.net/npm/dseg/fonts/DSEG7-Classic/DSEG7Classic-Bold.woff2') format('woff2'),
+        url('https://cdn.jsdelivr.net/npm/dseg/fonts/DSEG7-Classic/DSEG7Classic-Bold.woff') format('woff'),
+        url('https://cdn.jsdelivr.net/npm/dseg/fonts/DSEG7-Classic/DSEG7Classic-Bold.ttf') format('truetype');
+      font-weight: bold;
+      font-style: normal;
+    }
+
+    @font-face {
+      font-family: 'DSEG7-Classic';
+      src: url('https://cdn.jsdelivr.net/npm/dseg/fonts/DSEG7-Classic/DSEG7Classic-Regular.woff2') format('woff2'),
+        url('https://cdn.jsdelivr.net/npm/dseg/fonts/DSEG7-Classic/DSEG7Classic-Regular.woff') format('woff'),
+        url('https://cdn.jsdelivr.net/npm/dseg/fonts/DSEG7-Classic/DSEG7Classic-Regular.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    /* LED display elements use the seven-segment font */
+    .countdown-number,
+    .countdown-label,
+    #checkpoint-name-display,
+    #final-message {
+      font-family: 'DSEG7-Classic', 'Segoe UI', system-ui, sans-serif;
+    }
+
+    /* Checkpoint name + final message inherit the chosen number color */
+    #checkpoint-name-display {
+      color: var(--number-color, #00ffff);
+      text-shadow: 0 0 20px var(--glow-color, #00ffff);
+    }
+
+    #final-message {
+      color: var(--number-color, #00ffff);
+      text-shadow: 0 0 30px var(--glow-color, #00ffff), 0 0 60px var(--glow-color, #00ffff);
+    }
+
+    /* Warning glow should always take priority over the blink effect */
+    .warning-glow {
+      animation: red-glow-blink 1s infinite !important;
+    }
+
+    /* Solid background color override (set from Quick Settings) */
+    body.custom-bg {
+      background-image: none;
+      background-color: var(--bg-color, #1e1b4b);
+    }
+
+    /* Blink effect for the LED digits */
+    @keyframes led-blink {
+
+      0%,
+      49% {
+        opacity: 1;
+      }
+
+      50%,
+      100% {
+        opacity: 0.12;
+      }
+    }
+
+    body.blink-on .countdown-number,
+    body.blink-on #checkpoint-name-display,
+    body.blink-on #final-message {
+      animation: led-blink 1s linear infinite;
+    }
+
+    /* Colon separators between the digit groups (HH:MM:SS) */
+    .countdown-colon {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 0.24em;
+      height: 1em;
+      font-size: clamp(4rem, 15vw, 15rem);
+      line-height: 1;
+    }
+
+    .countdown-colon::before,
+    .countdown-colon::after {
+      content: "";
+      display: block;
+      width: 0.18em;
+      height: 0.18em;
+      border-radius: 9999px;
+      background-color: var(--number-color, #00ffff);
+      box-shadow: 0 0 0.1em var(--glow-color, #00ffff), 0 0 0.2em var(--glow-color, #00ffff);
+    }
+
+    .countdown-colon::before {
+      margin-bottom: 0.12em;
+    }
+
+    /* Blink effect for the colons */
+    @keyframes colon-blink {
+
+      0%,
+      49% {
+        opacity: 1;
+      }
+
+      50%,
+      100% {
+        opacity: 0.12;
+      }
+    }
+
+    body.blink-colon-on .countdown-colon {
+      animation: colon-blink 1s linear infinite;
+    }
+
+    /* ===== Quick Settings Panel ===== */
+    #quick-settings-button {
+      transition: transform 0.2s, background-color 0.2s;
+    }
+
+    #quick-settings-button:hover {
+      transform: scale(1.08);
+    }
+
+    /* Compact toggle switches */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 42px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .switch .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #4b5563;
+      border-radius: 9999px;
+      transition: background-color 0.2s;
+    }
+
+    .switch .slider::before {
+      content: "";
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      top: 3px;
+      background-color: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+
+    .switch input:checked+.slider {
+      background-color: #3b82f6;
+    }
+
+    .switch input:checked+.slider::before {
+      transform: translateX(18px);
+    }
   </style>
 </head>
 
@@ -192,12 +355,12 @@
       ></div>
       <div
         id="timer-display"
-        class="flex flex-wrap justify-center items-center gap-4 md:gap-8"
+        class="flex flex-wrap justify-center items-start gap-2 md:gap-4"
       >
         <!-- Hours -->
         <div
           id="hours-container"
-          class="flex flex-col items-center p-4"
+          class="flex flex-col items-center"
         >
           <span
             id="hours"
@@ -206,8 +369,14 @@
           <span class="countdown-label">Hours</span>
         </div>
 
+        <!-- Separator -->
+        <span
+          id="colon-1"
+          class="countdown-colon"
+        ></span>
+
         <!-- Minutes -->
-        <div class="flex flex-col items-center p-4">
+        <div class="flex flex-col items-center">
           <span
             id="minutes"
             class="countdown-number font-bold"
@@ -215,8 +384,14 @@
           <span class="countdown-label">Minutes</span>
         </div>
 
+        <!-- Separator -->
+        <span
+          id="colon-2"
+          class="countdown-colon"
+        ></span>
+
         <!-- Seconds -->
-        <div class="flex flex-col items-center p-4">
+        <div class="flex flex-col items-center">
           <span
             id="seconds"
             class="countdown-number font-bold"
@@ -420,6 +595,131 @@
     </button>
   </div>
 
+  <!-- Quick Settings: compact floating panel (easy to invoke, unobtrusive) -->
+  <div
+    id="quick-settings-wrap"
+    class="fixed bottom-4 left-4 z-40 flex flex-col items-start gap-3"
+  >
+    <!-- Toggle button -->
+    <button
+      id="quick-settings-button"
+      class="bg-gray-800/90 hover:bg-gray-700 text-white/90 p-3 rounded-full shadow-lg"
+      title="Quick Settings"
+      aria-label="Quick Settings"
+    >
+      <i class="fas fa-sliders-h"></i>
+    </button>
+
+    <!-- Panel -->
+    <div
+      id="quick-settings-panel"
+      class="hidden w-72 bg-gray-900/95 backdrop-blur border border-white/10 rounded-xl shadow-2xl p-4 text-sm"
+    >
+      <div class="flex items-center justify-between mb-3">
+        <span class="font-bold text-white flex items-center gap-2">
+          <i class="fas fa-sliders-h text-blue-400"></i> Quick Settings
+        </span>
+        <button
+          id="quick-settings-close"
+          class="text-white/50 hover:text-white text-xl leading-none"
+          aria-label="Close Quick Settings"
+        >&times;</button>
+      </div>
+
+      <div class="space-y-3">
+        <!-- Number color -->
+        <div class="flex items-center justify-between gap-2">
+          <label
+            for="qs-number-color"
+            class="text-white/80"
+          >Number Color</label>
+          <input
+            id="qs-number-color"
+            type="color"
+            value="#00ffff"
+            class="h-8 w-12 rounded cursor-pointer border border-white/20 bg-transparent"
+          >
+        </div>
+
+        <!-- Glow color -->
+        <div class="flex items-center justify-between gap-2">
+          <label
+            for="qs-glow-color"
+            class="text-white/80"
+          >Glow Color</label>
+          <input
+            id="qs-glow-color"
+            type="color"
+            value="#00ffff"
+            class="h-8 w-12 rounded cursor-pointer border border-white/20 bg-transparent"
+          >
+        </div>
+
+        <!-- Background color -->
+        <div class="flex items-center justify-between gap-2">
+          <label
+            for="qs-bg-color"
+            class="text-white/80"
+          >Background Color</label>
+          <input
+            id="qs-bg-color"
+            type="color"
+            value="#1e1b4b"
+            class="h-8 w-12 rounded cursor-pointer border border-white/20 bg-transparent"
+          >
+        </div>
+
+        <!-- Background image on/off -->
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-white/80">Background Image</span>
+          <label class="switch">
+            <input
+              id="qs-bg-image-toggle"
+              type="checkbox"
+              checked
+            >
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Blink on/off -->
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-white/80">Blink</span>
+          <label class="switch">
+            <input
+              id="qs-blink-toggle"
+              type="checkbox"
+            >
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Blink colon on/off -->
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-white/80">Blink Colon</span>
+          <label class="switch">
+            <input
+              id="qs-colon-blink-toggle"
+              type="checkbox"
+              checked
+            >
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Reset defaults -->
+        <div class="pt-1">
+          <button
+            id="qs-reset"
+            class="w-full bg-white/10 hover:bg-white/20 text-white/80 py-1.5 rounded-lg transition-colors text-xs"
+          >
+            Reset Defaults
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Help Modal -->
   <div
     id="help-modal"
@@ -443,12 +743,29 @@
 
         <h3>Customization</h3>
         <ul>
+          <li><strong>Seven-Segment Display:</strong> The countdown digits use a seven-segment LED-style font by
+            default.
+          </li>
           <li><strong>Background Image:</strong> Click "Choose Background Image" to select an image from your device.
             This background will be saved for your next visit. You can also change it during a live countdown using the
             camera icon <i class="fas fa-camera"></i>.</li>
           <li><strong>Final Message:</strong> Type a custom message in the "Message to display at the end" box. This
             message will appear when the countdown finishes.</li>
         </ul>
+
+        <h3>Quick Settings Panel</h3>
+        <p>Click the sliders icon <i class="fas fa-sliders-h"></i> in the bottom-left corner to open the compact Quick
+          Settings panel. It lets you fine-tune the look of the timer without getting in the way:</p>
+        <ul>
+          <li><strong>Number Color:</strong> Change the color of the seven-segment digits.</li>
+          <li><strong>Glow Color:</strong> Change the neon glow around the digits.</li>
+          <li><strong>Background Color:</strong> Set a solid background color (overrides the default gradient).</li>
+          <li><strong>Background Image:</strong> Toggle the background image on or off.</li>
+          <li><strong>Blink:</strong> Toggle a blinking effect on the digits on or off.</li>
+          <li><strong>Blink Colon:</strong> Toggle a blinking effect on the colons between the digits on or off.</li>
+          <li><strong>Reset Defaults:</strong> Restore all colors and toggles to their default values.</li>
+        </ul>
+        <p>All quick settings are saved in your browser and restored the next time you visit.</p>
 
         <h3>Advanced Settings (Checkpoints)</h3>
         <p>For complex timers, you can use Checkpoints. Click "Advanced Settings" to switch to this mode.</p>
@@ -470,7 +787,8 @@
 
         <h3>In-Countdown Controls</h3>
         <ul>
-          <li><strong>Stop Countdown:</strong> Stops the current timer completely and resets all settings.</li>
+          <li><strong>Stop Countdown:</strong> Stops the current timer. All your configured settings are kept and
+            remembered for your next visit.</li>
           <li><strong>Change Background <i class="fas fa-camera"></i>:</strong> Opens a file dialog to select a new
             background image without stopping the timer.</li>
           <li><strong>Fullscreen <i class="fas fa-expand"></i>:</strong> Toggles fullscreen mode for an immersive
@@ -478,8 +796,9 @@
         </ul>
 
         <h3>Data Persistence</h3>
-        <p>All your settings, including the timer's end time, checkpoints, and customizations, are automatically saved
-          in your browser. If you reload the page, the countdown will resume exactly where it left off.</p>
+        <p>All your settings — countdown duration, final message, checkpoints, warning time, colors, background, and
+          display toggles — are automatically saved in your browser and restored the next time you visit. If you reload
+          during a countdown, it will resume exactly where it left off.</p>
       </div>
     </div>
   </div>
@@ -540,9 +859,34 @@
     const secondsElement = document.getElementById('seconds')
     const beepSound = document.getElementById('beep-sound')
 
+    // Quick Settings Panel Elements
+    const quickSettingsButton = document.getElementById('quick-settings-button')
+    const quickSettingsPanel = document.getElementById('quick-settings-panel')
+    const quickSettingsClose = document.getElementById('quick-settings-close')
+    const qsNumberColor = document.getElementById('qs-number-color')
+    const qsGlowColor = document.getElementById('qs-glow-color')
+    const qsBgColor = document.getElementById('qs-bg-color')
+    const qsBgImageToggle = document.getElementById('qs-bg-image-toggle')
+    const qsBlinkToggle = document.getElementById('qs-blink-toggle')
+    const qsColonBlinkToggle = document.getElementById('qs-colon-blink-toggle')
+    const qsReset = document.getElementById('qs-reset')
+    const colon1 = document.getElementById('colon-1')
+    const colon2 = document.getElementById('colon-2')
+
     let realTimeClockInterval
     let countdownInterval
     let hasInteracted = false // Flag to check for user interaction
+    let currentBackgroundData = null // Currently applied background image (data URL)
+
+    const DEFAULT_QUICK_SETTINGS = {
+      numberColor: '#00ffff',
+      glowColor: '#00ffff',
+      bgColor: null, // null = keep the default gradient background
+      bgImageEnabled: true,
+      blinkEnabled: false,
+      colonBlink: true
+    }
+    let settings = { ...DEFAULT_QUICK_SETTINGS }
 
     // Function to pad a number with a leading zero
     function pad (number) {
@@ -566,6 +910,11 @@
 
       row.querySelector('.remove-checkpoint-button').addEventListener('click', () => {
         row.remove()
+        saveCheckpointsFromUI()
+      })
+
+      row.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', saveCheckpointsFromUI)
       })
     }
 
@@ -615,18 +964,108 @@
       const backgroundData = JSON.parse(localStorage.getItem('backgroundData'))
       const finalText = JSON.parse(localStorage.getItem('finalText')) || 'END!!'
       const checkpoints = JSON.parse(localStorage.getItem('checkpoints'))
+      const checkpointConfig = JSON.parse(localStorage.getItem('checkpointConfig'))
       const checkpointEndTimes = JSON.parse(localStorage.getItem('checkpointEndTimes'))
       const warningTime = JSON.parse(localStorage.getItem('warningTime'))
-      return { targetTimestamp, backgroundData, finalText, checkpoints, checkpointEndTimes, warningTime }
+      const quickSettings = JSON.parse(localStorage.getItem('quickSettings'))
+      const basicDuration = JSON.parse(localStorage.getItem('basicDuration'))
+      const mode = JSON.parse(localStorage.getItem('mode'))
+      return { targetTimestamp, backgroundData, finalText, checkpoints, checkpointConfig, checkpointEndTimes, warningTime, quickSettings, basicDuration, mode }
     }
 
     function clearLocalStorage () {
+      // Only clear the active countdown runtime data.
+      // User preferences (duration, final text, checkpoints, warning time,
+      // background, quick settings, mode) are kept so they persist across visits.
       localStorage.removeItem('countdownTarget')
-      localStorage.removeItem('backgroundData')
-      localStorage.removeItem('finalText')
-      localStorage.removeItem('checkpoints')
       localStorage.removeItem('checkpointEndTimes')
-      localStorage.removeItem('warningTime')
+      localStorage.removeItem('checkpoints')
+    }
+
+    // --- Preference Persistence Helpers ---
+    function saveBasicDuration () {
+      saveToLocalStorage({
+        basicDuration: {
+          h: parseInt(countdownHoursInput.value) || 0,
+          m: parseInt(countdownMinutesInput.value) || 0,
+          s: parseInt(countdownSecondsInput.value) || 0
+        }
+      })
+    }
+
+    function saveWarningTime () {
+      saveToLocalStorage({
+        warningTime: {
+          m: parseInt(warningMinutesInput.value) || 0,
+          s: parseInt(warningSecondsInput.value) || 0
+        }
+      })
+    }
+
+    function saveCheckpointsFromUI () {
+      const rows = checkpointsList.querySelectorAll('.checkpoint-row')
+      const checkpoints = []
+      rows.forEach(row => {
+        const name = row.querySelector('.checkpoint-name').value || ''
+        const h = parseInt(row.querySelector('.checkpoint-h').value) || 0
+        const m = parseInt(row.querySelector('.checkpoint-m').value) || 0
+        const s = parseInt(row.querySelector('.checkpoint-s').value) || 0
+        const duration = (h * 3600 + m * 60 + s) * 1000
+        checkpoints.push({ name, duration })
+      })
+      saveToLocalStorage({ checkpointConfig: checkpoints })
+    }
+
+    // --- Quick Settings Functions ---
+    function applyNumberColors () {
+      document.documentElement.style.setProperty('--number-color', settings.numberColor)
+      document.documentElement.style.setProperty('--glow-color', settings.glowColor)
+    }
+
+    function applyBgColor () {
+      if (settings.bgColor) {
+        body.classList.add('custom-bg')
+        document.documentElement.style.setProperty('--bg-color', settings.bgColor)
+      } else {
+        body.classList.remove('custom-bg')
+        document.documentElement.style.removeProperty('--bg-color')
+      }
+    }
+
+    function applyBackground () {
+      if (settings.bgImageEnabled) {
+        body.style.backgroundImage = currentBackgroundData ? `url(${currentBackgroundData})` : ''
+      } else {
+        body.style.backgroundImage = 'none'
+      }
+    }
+
+    function applyBlink () {
+      body.classList.toggle('blink-on', settings.blinkEnabled)
+      body.classList.toggle('blink-colon-on', settings.colonBlink)
+    }
+
+    function saveQuickSettings () {
+      saveToLocalStorage({ quickSettings: settings })
+    }
+
+    function syncQuickSettingsUI () {
+      qsNumberColor.value = settings.numberColor
+      qsGlowColor.value = settings.glowColor
+      qsBgColor.value = settings.bgColor || '#1e1b4b'
+      qsBgImageToggle.checked = settings.bgImageEnabled
+      qsBlinkToggle.checked = settings.blinkEnabled
+      qsColonBlinkToggle.checked = settings.colonBlink
+    }
+
+    function loadQuickSettings () {
+      const saved = loadFromLocalStorage().quickSettings || {}
+      settings = { ...DEFAULT_QUICK_SETTINGS, ...saved }
+      syncQuickSettingsUI()
+      applyNumberColors()
+      applyBgColor()
+      applyBackground()
+      applyBlink()
     }
 
     // --- UI State Functions ---
@@ -640,6 +1079,7 @@
       [hoursElement, minutesElement, secondsElement, checkpointNameDisplay].forEach(el => el.classList.remove('warning-glow'))
       checkpointNameDisplay.textContent = ''
       hoursContainer.classList.remove('hidden')
+      colon1.classList.remove('hidden')
     }
 
     function showCountdownState () {
@@ -703,9 +1143,11 @@
       clearInterval(realTimeClockInterval)
       showCountdownState()
       hoursContainer.classList.toggle('hidden', !showHours)
+      colon1.classList.toggle('hidden', !showHours)
 
       if (backgroundData) {
-        body.style.backgroundImage = `url(${backgroundData})`
+        currentBackgroundData = backgroundData
+        applyBackground()
       }
 
       countdownInterval = setInterval(() => {
@@ -719,6 +1161,7 @@
           createConfetti()
 
           hoursContainer.classList.remove('hidden')
+          colon1.classList.remove('hidden')
           timerDisplay.classList.remove('hidden')
           hoursElement.textContent = '00'
           minutesElement.textContent = '00'
@@ -779,6 +1222,7 @@
     function toggleAdvancedMode (showAdvanced) {
       advancedConfigPanel.classList.toggle('hidden', !showAdvanced)
       basicInputs.classList.toggle('hidden', showAdvanced)
+      saveToLocalStorage({ mode: showAdvanced ? 'advanced' : 'basic' })
     }
 
     advancedToggleButton.addEventListener('click', () => toggleAdvancedMode(true))
@@ -789,6 +1233,7 @@
     resetCheckpointsButton.addEventListener('click', () => {
       if (confirm('Are you sure you want to reset all checkpoints?')) {
         checkpointsList.innerHTML = ''
+        saveCheckpointsFromUI()
       }
     })
 
@@ -857,10 +1302,10 @@
       if (file) {
         const reader = new FileReader()
         reader.onload = (e) => {
-          const backgroundData = e.target.result
-          body.style.backgroundImage = `url(${backgroundData})`
+          currentBackgroundData = e.target.result
+          applyBackground()
           // Use the robust save function to handle potential quota errors
-          saveToLocalStorage({ backgroundData: backgroundData })
+          saveToLocalStorage({ backgroundData: currentBackgroundData })
         }
         reader.readAsDataURL(file)
       }
@@ -871,16 +1316,17 @@
       beepSound.pause()
       beepSound.currentTime = 0
       clearLocalStorage()
-      body.style.backgroundImage = ''
       startRealTimeClock()
     })
 
     restartButton.addEventListener('click', startRealTimeClock)
     changeBackgroundButton.addEventListener('click', () => backgroundImageInput.click())
     fullscreenButton.addEventListener('click', toggleFullscreen)
-    countdownHoursInput.addEventListener('input', updateDisplayFromInput)
-    countdownMinutesInput.addEventListener('input', updateDisplayFromInput)
-    countdownSecondsInput.addEventListener('input', updateDisplayFromInput)
+    countdownHoursInput.addEventListener('input', () => { updateDisplayFromInput(); saveBasicDuration() })
+    countdownMinutesInput.addEventListener('input', () => { updateDisplayFromInput(); saveBasicDuration() })
+    countdownSecondsInput.addEventListener('input', () => { updateDisplayFromInput(); saveBasicDuration() })
+    warningMinutesInput.addEventListener('input', saveWarningTime)
+    warningSecondsInput.addEventListener('input', saveWarningTime)
     finalTextInput.addEventListener('input', () => {
       saveToLocalStorage({ finalText: finalTextInput.value })
     })
@@ -894,6 +1340,56 @@
       }
     })
 
+    // Quick Settings Panel Listeners
+    quickSettingsButton.addEventListener('click', () => quickSettingsPanel.classList.toggle('hidden'))
+    quickSettingsClose.addEventListener('click', () => quickSettingsPanel.classList.add('hidden'))
+
+    qsNumberColor.addEventListener('input', () => {
+      settings.numberColor = qsNumberColor.value
+      applyNumberColors()
+      saveQuickSettings()
+    })
+
+    qsGlowColor.addEventListener('input', () => {
+      settings.glowColor = qsGlowColor.value
+      applyNumberColors()
+      saveQuickSettings()
+    })
+
+    qsBgColor.addEventListener('input', () => {
+      settings.bgColor = qsBgColor.value
+      applyBgColor()
+      saveQuickSettings()
+    })
+
+    qsBgImageToggle.addEventListener('change', () => {
+      settings.bgImageEnabled = qsBgImageToggle.checked
+      applyBackground()
+      saveQuickSettings()
+    })
+
+    qsBlinkToggle.addEventListener('change', () => {
+      settings.blinkEnabled = qsBlinkToggle.checked
+      applyBlink()
+      saveQuickSettings()
+    })
+
+    qsColonBlinkToggle.addEventListener('change', () => {
+      settings.colonBlink = qsColonBlinkToggle.checked
+      applyBlink()
+      saveQuickSettings()
+    })
+
+    qsReset.addEventListener('click', () => {
+      settings = { ...DEFAULT_QUICK_SETTINGS }
+      syncQuickSettingsUI()
+      applyNumberColors()
+      applyBgColor()
+      applyBackground()
+      applyBlink()
+      saveQuickSettings()
+    })
+
     document.addEventListener('mousedown', () => { hasInteracted = true }, { once: true })
     document.addEventListener('keydown', () => { hasInteracted = true }, { once: true })
 
@@ -902,8 +1398,9 @@
       const data = loadFromLocalStorage()
 
       if (data.backgroundData) {
-        body.style.backgroundImage = `url(${data.backgroundData})`
+        currentBackgroundData = data.backgroundData
       }
+      loadQuickSettings()
 
       finalTextInput.value = data.finalText
 
@@ -912,16 +1409,25 @@
         warningSecondsInput.value = data.warningTime.s
       }
 
-      if (data.checkpoints) {
+      const uiCheckpoints = data.checkpointConfig || data.checkpoints
+      if (uiCheckpoints) {
         checkpointsList.innerHTML = ''
-        data.checkpoints.forEach((cp, index) => {
+        uiCheckpoints.forEach((cp, index) => {
           const checkpointWithId = { ...cp, id: Date.now() + index, h: Math.floor(cp.duration / 3600000), m: Math.floor((cp.duration % 3600000) / 60000), s: Math.floor((cp.duration % 60000) / 1000) }
           addCheckpointRow(checkpointWithId)
         })
-        if (data.checkpoints.length > 0) {
-          toggleAdvancedMode(true)
-        }
       }
+
+      // Restore the basic countdown duration inputs
+      if (data.basicDuration) {
+        if (data.basicDuration.h !== undefined) countdownHoursInput.value = data.basicDuration.h
+        if (data.basicDuration.m !== undefined) countdownMinutesInput.value = data.basicDuration.m
+        if (data.basicDuration.s !== undefined) countdownSecondsInput.value = data.basicDuration.s
+      }
+
+      // Restore the basic/advanced mode (advanced by default when checkpoints exist)
+      const savedMode = data.mode || (uiCheckpoints && uiCheckpoints.length > 0 ? 'advanced' : 'basic')
+      toggleAdvancedMode(savedMode === 'advanced')
 
       if (data.targetTimestamp && data.targetTimestamp > new Date().getTime()) {
         hasInteracted = true

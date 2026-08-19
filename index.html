@@ -61,6 +61,20 @@
     href="https://cdn.jsdelivr.net"
     crossorigin
   >
+  <!-- Chakra Petch: modern Thai + Latin digital-style font for labels (Google Fonts) -->
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+  >
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+  >
+  <link
+    href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  >
   <style>
     /* Main styling for the entire screen */
     body {
@@ -82,7 +96,7 @@
       font-size: clamp(4rem, 15vw, 15rem);
       /* Adjusts size to be as large as possible */
       color: var(--number-color, #00ffff);
-      text-shadow: 0 0 20px var(--glow-color, #00ffff), 0 0 30px var(--glow-color, #00ffff), 0 0 40px var(--glow-color, #00ffff);
+      text-shadow: 0 0 var(--glow-blur-1, 20px) var(--glow-color, #00ffff), 0 0 var(--glow-blur-2, 30px) var(--glow-color, #00ffff), 0 0 var(--glow-blur-3, 40px) var(--glow-color, #00ffff);
       /* Glow effect */
       line-height: 1;
       /* Adjust line-height for better fit */
@@ -97,10 +111,10 @@
       /* Space between the digits and the label */
     }
 
-    /* Animation for the red glowing/blinking effect */
+    /* Animation for the red glowing/blinking effect (scaled with glow intensity) */
     @keyframes red-glow-blink {
       50% {
-        text-shadow: 0 0 20px #ff3333, 0 0 30px #ff3333, 0 0 40px #ff3333;
+        text-shadow: 0 0 var(--glow-blur-1, 20px) #ff3333, 0 0 var(--glow-blur-2, 30px) #ff3333, 0 0 var(--glow-blur-3, 40px) #ff3333;
       }
     }
 
@@ -183,23 +197,29 @@
       font-style: normal;
     }
 
-    /* LED display elements use the seven-segment font */
+    /* LED digits and the final message keep the seven-segment font */
     .countdown-number,
-    .countdown-label,
-    #checkpoint-name-display,
     #final-message {
       font-family: 'DSEG7-Classic', 'Segoe UI', system-ui, sans-serif;
     }
 
-    /* Checkpoint name + final message inherit the chosen number color */
+    /* Text labels (unit + checkpoint name) use a modern Thai/Latin digital font */
+    .countdown-label,
+    #checkpoint-name-display {
+      font-family: 'Chakra Petch', 'Segoe UI', system-ui, sans-serif;
+      font-weight: 600;
+    }
+
+    /* Checkpoint name: keeps the timer color/glow, no frame so long names stay clean */
     #checkpoint-name-display {
       color: var(--number-color, #00ffff);
-      text-shadow: 0 0 20px var(--glow-color, #00ffff);
+      text-shadow: 0 0 var(--glow-blur-1, 20px) var(--glow-color, #00ffff);
+      letter-spacing: 0.08em;
     }
 
     #final-message {
       color: var(--number-color, #00ffff);
-      text-shadow: 0 0 30px var(--glow-color, #00ffff), 0 0 60px var(--glow-color, #00ffff);
+      text-shadow: 0 0 var(--glow-blur-2, 30px) var(--glow-color, #00ffff), 0 0 var(--glow-blur-4, 60px) var(--glow-color, #00ffff);
     }
 
     /* Warning glow should always take priority over the blink effect */
@@ -260,22 +280,9 @@
       margin-bottom: 0.12em;
     }
 
-    /* Blink effect for the colons */
-    @keyframes colon-blink {
-
-      0%,
-      49% {
-        opacity: 1;
-      }
-
-      50%,
-      100% {
-        opacity: 0.12;
-      }
-    }
-
-    body.blink-colon-on .countdown-colon {
-      animation: colon-blink 1s linear infinite;
+    /* Colon blink is JS-driven (body.colon-dim) so both colons stay perfectly in sync */
+    body.blink-colon-on.colon-dim .countdown-colon {
+      opacity: 0.12;
     }
 
     /* ===== Quick Settings Panel ===== */
@@ -350,9 +357,20 @@
       class="text-center z-10 w-full"
     >
       <div
-        id="checkpoint-name-display"
-        class="text-2xl md:text-4xl font-bold mb-4 h-10"
-      ></div>
+        id="checkpoint-name-wrap"
+        class="hidden justify-center items-center mb-10"
+      >
+        <span
+          id="checkpoint-name-display"
+          class="text-2xl md:text-4xl font-bold"
+        ></span>
+      </div>
+      <div
+        id="paused-indicator"
+        class="hidden text-center text-2xl md:text-3xl font-bold tracking-[0.3em] text-yellow-400 mb-10"
+      >
+        <i class="fas fa-pause mr-2"></i>PAUSED
+      </div>
       <div
         id="timer-display"
         class="flex flex-wrap justify-center items-start gap-2 md:gap-4"
@@ -424,144 +442,198 @@
         id="config-panel"
         class="mt-8"
       >
-        <div class="relative bg-white/10 p-4 md:p-6 rounded-xl shadow-xl backdrop-blur-sm w-full max-w-2xl mx-auto">
+        <div class="relative bg-white/10 p-4 md:p-5 rounded-xl shadow-xl backdrop-blur-sm w-full max-w-xl mx-auto">
           <!-- Help Button -->
           <button
             id="help-button"
             class="absolute top-3 right-3 text-white/50 hover:text-white/80 transition-colors"
+            title="User Guide"
+            aria-label="User Guide"
           >
             <i class="fas fa-question-circle fa-lg"></i>
           </button>
 
           <!-- Basic Inputs -->
           <div id="basic-inputs">
-            <div class="flex items-center justify-center gap-2 mb-4">
-              <input
-                type="number"
-                id="countdown-hours"
-                min="0"
-                value="0"
-                class="w-20 p-2 rounded-lg text-center text-black bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-              <span class="text-sm font-bold">Hours</span>
-              <input
-                type="number"
-                id="countdown-minutes"
-                min="0"
-                max="59"
-                value="0"
-                class="w-20 p-2 rounded-lg text-center text-black bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-              <span class="text-sm font-bold">Minutes</span>
-              <input
-                type="number"
-                id="countdown-seconds"
-                min="0"
-                max="59"
-                value="0"
-                class="w-20 p-2 rounded-lg text-center text-black bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-              <span class="text-sm font-bold">Seconds</span>
-            </div>
-          </div>
-
-          <!-- Background image selection -->
-          <div class="mb-4">
-            <label
-              for="background-image"
-              class="block text-sm mb-2"
-            >Choose Background Image</label>
-            <input
-              type="file"
-              id="background-image"
-              accept="image/*"
-              class="w-full text-sm text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            >
-          </div>
-
-          <!-- Input for the end-of-countdown message -->
-          <div class="mb-4">
-            <label
-              for="final-text-input"
-              class="block text-sm mb-2"
-            >Message to display at the end (default is "END!!")</label>
-            <input
-              type="text"
-              id="final-text-input"
-              placeholder="END!!"
-              value="END!!"
-              class="w-full p-2 rounded-lg text-black bg-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-          </div>
-
-          <!-- Advanced Settings -->
-          <div class="mb-4">
-            <button
-              id="advanced-toggle-button"
-              class="text-blue-300 hover:text-blue-200"
-            >Advanced Settings</button>
-          </div>
-          <div
-            id="advanced-config-panel"
-            class="hidden border-t border-white/20 pt-4"
-          >
-            <h3 class="text-lg font-bold mb-2">Checkpoints</h3>
-            <div
-              id="checkpoints-list"
-              class="space-y-2 max-h-40 overflow-y-auto pr-2"
-            >
-              <!-- Checkpoint rows will be injected here -->
-            </div>
-            <div class="flex justify-between items-center mt-4">
-              <button
-                id="add-checkpoint-button"
-                class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm"
-              >
-                <i class="fas fa-plus"></i> Add Checkpoint
-              </button>
-              <button
-                id="reset-checkpoints-button"
-                class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg text-sm"
-              >
-                <i class="fas fa-undo"></i> Reset All
-              </button>
-            </div>
-            <div class="flex justify-between items-center mt-4 border-t border-white/20 pt-4">
-              <div>
-                <label
-                  for="warning-time"
-                  class="text-sm mr-2"
-                >Warning Time:</label>
+            <div class="grid grid-cols-3 gap-2 mb-3">
+              <div class="flex flex-col items-center">
                 <input
                   type="number"
-                  id="warning-minutes"
+                  id="countdown-hours"
+                  min="0"
+                  value="0"
+                  class="w-full p-2 rounded-lg text-center text-lg font-bold text-black bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                <span class="text-xs font-bold mt-1 text-white/70">Hours</span>
+              </div>
+              <div class="flex flex-col items-center">
+                <input
+                  type="number"
+                  id="countdown-minutes"
                   min="0"
                   max="59"
                   value="0"
-                  class="w-14 p-1 rounded-lg text-center text-sm text-black bg-gray-200"
-                >m
+                  class="w-full p-2 rounded-lg text-center text-lg font-bold text-black bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                <span class="text-xs font-bold mt-1 text-white/70">Minutes</span>
+              </div>
+              <div class="flex flex-col items-center">
                 <input
                   type="number"
-                  id="warning-seconds"
+                  id="countdown-seconds"
                   min="0"
                   max="59"
-                  value="10"
-                  class="w-14 p-1 rounded-lg text-center text-sm text-black bg-gray-200"
-                >s
+                  value="0"
+                  class="w-full p-2 rounded-lg text-center text-lg font-bold text-black bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                <span class="text-xs font-bold mt-1 text-white/70">Seconds</span>
               </div>
-              <button
-                id="exit-advanced-button"
-                class="text-blue-300 hover:text-blue-200 text-sm"
-              >Back to Basic</button>
             </div>
           </div>
 
+          <!-- Start button -->
           <button
             id="start-button"
-            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-colors mt-6"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg shadow-lg transition-colors"
           >
-            Start Countdown
+            <i class="fas fa-play mr-2"></i>Start Countdown
           </button>
+
+          <!-- Options toggle -->
+          <div class="mt-3 pt-2 border-t border-white/10">
+            <button
+              id="options-toggle-button"
+              class="w-full flex items-center justify-between text-sm font-bold text-blue-300 hover:text-blue-200 transition-colors"
+              aria-expanded="false"
+            >
+              <span class="flex items-center gap-2"><i class="fas fa-sliders-h"></i> Options</span>
+              <i
+                id="options-chevron"
+                class="fas fa-chevron-down text-xs transition-transform"
+              ></i>
+            </button>
+
+            <div
+              id="options-panel"
+              class="hidden mt-2 space-y-2"
+            >
+              <!-- Background image selection -->
+              <div>
+                <label
+                  for="background-image"
+                  class="block text-xs font-bold mb-1 text-white/70"
+                >Background Image</label>
+                <input
+                  type="file"
+                  id="background-image"
+                  accept="image/*"
+                  class="block w-full text-xs text-white/80 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-500 file:text-white hover:file:bg-blue-600"
+                >
+              </div>
+
+              <!-- End-of-countdown message -->
+              <div>
+                <label
+                  for="final-text-input"
+                  class="block text-xs font-bold mb-1 text-white/70"
+                >End Message <span class="font-normal text-white/40">(default "END!!")</span></label>
+                <input
+                  type="text"
+                  id="final-text-input"
+                  placeholder="END!!"
+                  value="END!!"
+                  class="w-full p-1.5 rounded-lg text-sm text-black bg-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Advanced toggle -->
+          <div class="mt-2 pt-2 border-t border-white/10">
+            <button
+              id="advanced-toggle-button"
+              class="w-full flex items-center justify-between text-sm font-bold text-purple-300 hover:text-purple-200 transition-colors"
+              aria-expanded="false"
+            >
+              <span class="flex items-center gap-2"><i class="fas fa-list-ol"></i> Advanced</span>
+              <i
+                id="advanced-chevron"
+                class="fas fa-chevron-down text-xs transition-transform"
+              ></i>
+            </button>
+            <div
+              id="advanced-config-panel"
+              class="hidden mt-2 space-y-2"
+            >
+              <div
+                id="checkpoints-list"
+                class="space-y-2 max-h-40 overflow-y-auto pr-2"
+              >
+                <!-- Checkpoint rows will be injected here -->
+              </div>
+              <div class="flex justify-between items-center gap-2">
+                <button
+                  id="add-checkpoint-button"
+                  class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-1.5 px-3 rounded-lg text-xs"
+                >
+                  <i class="fas fa-plus"></i> Add
+                </button>
+                <button
+                  id="reset-checkpoints-button"
+                  class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-1.5 px-3 rounded-lg text-xs"
+                >
+                  <i class="fas fa-undo"></i> Reset All
+                </button>
+              </div>
+              <div class="pt-2 border-t border-white/10">
+                <p class="text-xs font-bold mb-1.5 text-white/70">Checkpoint Time Display</p>
+                <label class="flex items-center gap-2 text-xs text-white/80 mb-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="checkpoint-display-mode"
+                    value="combined"
+                    checked
+                    class="accent-blue-500"
+                  >
+                  Combined <span class="text-white/40">(total remaining)</span>
+                </label>
+                <label class="flex items-center gap-2 text-xs text-white/80 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="checkpoint-display-mode"
+                    value="separate"
+                    class="accent-blue-500"
+                  >
+                  Separate <span class="text-white/40">(current only)</span>
+                </label>
+              </div>
+              <div class="flex flex-wrap justify-between items-center gap-2 pt-2 border-t border-white/10">
+                <div class="flex items-center gap-1">
+                  <span class="text-xs font-bold mr-1 text-white/70">Warning:</span>
+                  <input
+                    type="number"
+                    id="warning-minutes"
+                    min="0"
+                    max="59"
+                    value="0"
+                    class="w-12 p-1 rounded-lg text-center text-sm text-black bg-gray-200"
+                  ><span class="text-xs text-white/60">m</span>
+                  <input
+                    type="number"
+                    id="warning-seconds"
+                    min="0"
+                    max="59"
+                    value="10"
+                    class="w-12 p-1 rounded-lg text-center text-sm text-black bg-gray-200"
+                  ><span class="text-xs text-white/60">s</span>
+                </div>
+                <button
+                  id="exit-advanced-button"
+                  class="text-purple-300 hover:text-purple-200 text-xs font-bold"
+                >Back to Basic</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -575,6 +647,13 @@
           class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition-colors"
         >
           Stop Countdown
+        </button>
+        <button
+          id="pause-button"
+          class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold p-3 rounded-full shadow-lg transition-colors"
+          title="Pause"
+        >
+          <i class="fas fa-pause"></i>
         </button>
         <button
           id="change-background-button"
@@ -653,6 +732,28 @@
             value="#00ffff"
             class="h-8 w-12 rounded cursor-pointer border border-white/20 bg-transparent"
           >
+        </div>
+
+        <!-- Glow intensity -->
+        <div class="flex items-center justify-between gap-2">
+          <label
+            for="qs-glow-spread"
+            class="text-white/80"
+          >Glow Intensity</label>
+          <div class="flex items-center gap-2">
+            <input
+              id="qs-glow-spread"
+              type="range"
+              min="0"
+              max="100"
+              value="100"
+              class="w-24 accent-blue-500 cursor-pointer"
+            >
+            <span
+              id="qs-glow-spread-value"
+              class="text-xs text-white/60 w-8 text-right"
+            >100</span>
+          </div>
         </div>
 
         <!-- Background color -->
@@ -746,11 +847,11 @@
           <li><strong>Seven-Segment Display:</strong> The countdown digits use a seven-segment LED-style font by
             default.
           </li>
-          <li><strong>Background Image:</strong> Click "Choose Background Image" to select an image from your device.
-            This background will be saved for your next visit. You can also change it during a live countdown using the
-            camera icon <i class="fas fa-camera"></i>.</li>
-          <li><strong>Final Message:</strong> Type a custom message in the "Message to display at the end" box. This
-            message will appear when the countdown finishes.</li>
+          <li><strong>Background Image:</strong> Open "Options" in the main panel and click "Background
+            Image" to select an image from your device. This background will be saved for your next visit. You can also
+            change it during a live countdown using the camera icon <i class="fas fa-camera"></i>.</li>
+          <li><strong>Final Message:</strong> Under "Options", type a custom message in the "End Message"
+            box. This message will appear when the countdown finishes.</li>
         </ul>
 
         <h3>Quick Settings Panel</h3>
@@ -759,6 +860,7 @@
         <ul>
           <li><strong>Number Color:</strong> Change the color of the seven-segment digits.</li>
           <li><strong>Glow Color:</strong> Change the neon glow around the digits.</li>
+          <li><strong>Glow Intensity:</strong> Adjust how strong or spread-out the glow is around the digits.</li>
           <li><strong>Background Color:</strong> Set a solid background color (overrides the default gradient).</li>
           <li><strong>Background Image:</strong> Toggle the background image on or off.</li>
           <li><strong>Blink:</strong> Toggle a blinking effect on the digits on or off.</li>
@@ -768,9 +870,9 @@
         <p>All quick settings are saved in your browser and restored the next time you visit.</p>
 
         <h3>Advanced Settings (Checkpoints)</h3>
-        <p>For complex timers, you can use Checkpoints. Click "Advanced Settings" to switch to this mode.</p>
+        <p>For complex timers, you can use Checkpoints. Click "Advanced" in the main panel to switch to this mode.</p>
         <ul>
-          <li><strong>Adding a Checkpoint:</strong> Click "+ Add Checkpoint". A new row will appear.</li>
+          <li><strong>Adding a Checkpoint:</strong> Click "+ Add" to add a new row.</li>
           <li><strong>Configuring a Checkpoint:</strong> In each row, enter a name for the checkpoint and its specific
             duration (h, m, s). The total countdown time will be the sum of all checkpoint durations.</li>
           <li><strong>Removing a Checkpoint:</strong> Click the red '×' button on the right of any checkpoint row to
@@ -779,6 +881,9 @@
           <li><strong>Switching Modes:</strong> When in Advanced Mode, the timer uses the checkpoint list. To use the
             simple duration fields again, click "Back to Basic". The app will remember your checkpoints if you switch
             back to Advanced Mode later.</li>
+          <li><strong>Checkpoint Time Display:</strong> Choose how the timer counts down — <em>Combined</em> shows the
+            total time remaining across all checkpoints (default), while <em>Separate</em> shows only the current
+            checkpoint's remaining time.</li>
         </ul>
 
         <h3>Warning Time</h3>
@@ -793,6 +898,9 @@
             background image without stopping the timer.</li>
           <li><strong>Fullscreen <i class="fas fa-expand"></i>:</strong> Toggles fullscreen mode for an immersive
             experience. This button appears at the bottom-right during a countdown.</li>
+          <li><strong>Pause/Resume <i class="fas fa-pause"></i>:</strong> Freezes the timer without stopping it — useful
+            for advanced timers that have breaks (e.g., waiting before the Q&amp;A round). Press again to continue from
+            exactly where you left off; paused time is not counted.</li>
         </ul>
 
         <h3>Data Persistence</h3>
@@ -836,6 +944,7 @@
     const changeBackgroundButton = document.getElementById('change-background-button')
     const hoursContainer = document.getElementById('hours-container')
     const checkpointNameDisplay = document.getElementById('checkpoint-name-display')
+    const checkpointNameWrap = document.getElementById('checkpoint-name-wrap')
 
     // Advanced / Checkpoint Elements
     const advancedToggleButton = document.getElementById('advanced-toggle-button')
@@ -847,6 +956,10 @@
     const basicInputs = document.getElementById('basic-inputs')
     const warningMinutesInput = document.getElementById('warning-minutes')
     const warningSecondsInput = document.getElementById('warning-seconds')
+    const optionsToggleButton = document.getElementById('options-toggle-button')
+    const optionsPanel = document.getElementById('options-panel')
+    const optionsChevron = document.getElementById('options-chevron')
+    const advancedChevron = document.getElementById('advanced-chevron')
 
     // Help Modal Elements
     const helpButton = document.getElementById('help-button')
@@ -858,6 +971,9 @@
     const minutesElement = document.getElementById('minutes')
     const secondsElement = document.getElementById('seconds')
     const beepSound = document.getElementById('beep-sound')
+    const pauseButton = document.getElementById('pause-button')
+    const pausedIndicator = document.getElementById('paused-indicator')
+    const checkpointDisplayModeInputs = document.querySelectorAll('input[name="checkpoint-display-mode"]')
 
     // Quick Settings Panel Elements
     const quickSettingsButton = document.getElementById('quick-settings-button')
@@ -865,6 +981,8 @@
     const quickSettingsClose = document.getElementById('quick-settings-close')
     const qsNumberColor = document.getElementById('qs-number-color')
     const qsGlowColor = document.getElementById('qs-glow-color')
+    const qsGlowSpread = document.getElementById('qs-glow-spread')
+    const qsGlowSpreadValue = document.getElementById('qs-glow-spread-value')
     const qsBgColor = document.getElementById('qs-bg-color')
     const qsBgImageToggle = document.getElementById('qs-bg-image-toggle')
     const qsBlinkToggle = document.getElementById('qs-blink-toggle')
@@ -875,12 +993,24 @@
 
     let realTimeClockInterval
     let countdownInterval
+    let colonBlinkInterval = null
     let hasInteracted = false // Flag to check for user interaction
     let currentBackgroundData = null // Currently applied background image (data URL)
+
+    // Runtime countdown state (shared so pause/resume can access and shift it)
+    let targetTimestamp = 0
+    let checkpointEndTimes = []
+    let currentCheckpoints = []
+    let warningTimeMs = 0
+    let countdownTick = null
+    let displayMode = 'combined' // 'combined' | 'separate'
+    let paused = false
+    let pausedAt = null
 
     const DEFAULT_QUICK_SETTINGS = {
       numberColor: '#00ffff',
       glowColor: '#00ffff',
+      glowSpread: 100, // glow intensity (0-100) — scales the glow blur radius
       bgColor: null, // null = keep the default gradient background
       bgImageEnabled: true,
       blinkEnabled: false,
@@ -970,7 +1100,9 @@
       const quickSettings = JSON.parse(localStorage.getItem('quickSettings'))
       const basicDuration = JSON.parse(localStorage.getItem('basicDuration'))
       const mode = JSON.parse(localStorage.getItem('mode'))
-      return { targetTimestamp, backgroundData, finalText, checkpoints, checkpointConfig, checkpointEndTimes, warningTime, quickSettings, basicDuration, mode }
+      const checkpointDisplayMode = JSON.parse(localStorage.getItem('checkpointDisplayMode'))
+      const paused = JSON.parse(localStorage.getItem('paused'))
+      return { targetTimestamp, backgroundData, finalText, checkpoints, checkpointConfig, checkpointEndTimes, warningTime, quickSettings, basicDuration, mode, checkpointDisplayMode, paused }
     }
 
     function clearLocalStorage () {
@@ -980,6 +1112,7 @@
       localStorage.removeItem('countdownTarget')
       localStorage.removeItem('checkpointEndTimes')
       localStorage.removeItem('checkpoints')
+      localStorage.removeItem('paused')
     }
 
     // --- Preference Persistence Helpers ---
@@ -1020,6 +1153,13 @@
     function applyNumberColors () {
       document.documentElement.style.setProperty('--number-color', settings.numberColor)
       document.documentElement.style.setProperty('--glow-color', settings.glowColor)
+      // Glow intensity: scale the blur radius of the glow layers (0-100)
+      const spread = settings.glowSpread ?? 100
+      const base = spread * 0.2 // at 100 -> 20px
+      document.documentElement.style.setProperty('--glow-blur-1', `${Math.round(base)}px`)
+      document.documentElement.style.setProperty('--glow-blur-2', `${Math.round(base * 1.5)}px`)
+      document.documentElement.style.setProperty('--glow-blur-3', `${Math.round(base * 2)}px`)
+      document.documentElement.style.setProperty('--glow-blur-4', `${Math.round(base * 3)}px`)
     }
 
     function applyBgColor () {
@@ -1042,7 +1182,17 @@
 
     function applyBlink () {
       body.classList.toggle('blink-on', settings.blinkEnabled)
-      body.classList.toggle('blink-colon-on', settings.colonBlink)
+      // Colon blink is driven by a single JS timer so both colons always blink in sync
+      clearInterval(colonBlinkInterval)
+      colonBlinkInterval = null
+      body.classList.remove('blink-colon-on')
+      body.classList.remove('colon-dim')
+      if (settings.colonBlink) {
+        body.classList.add('blink-colon-on')
+        colonBlinkInterval = setInterval(() => {
+          body.classList.toggle('colon-dim')
+        }, 500)
+      }
     }
 
     function saveQuickSettings () {
@@ -1052,6 +1202,8 @@
     function syncQuickSettingsUI () {
       qsNumberColor.value = settings.numberColor
       qsGlowColor.value = settings.glowColor
+      qsGlowSpread.value = settings.glowSpread ?? 100
+      qsGlowSpreadValue.textContent = settings.glowSpread ?? 100
       qsBgColor.value = settings.bgColor || '#1e1b4b'
       qsBgImageToggle.checked = settings.bgImageEnabled
       qsBlinkToggle.checked = settings.blinkEnabled
@@ -1068,6 +1220,12 @@
       applyBlink()
     }
 
+    function setCheckpointName (name) {
+      const text = name || ''
+      checkpointNameDisplay.textContent = text
+      checkpointNameWrap.classList.toggle('hidden', !text)
+    }
+
     // --- UI State Functions ---
     function showConfigState () {
       configPanel.classList.remove('hidden')
@@ -1077,7 +1235,7 @@
 
       // Clear any active warning glows
       [hoursElement, minutesElement, secondsElement, checkpointNameDisplay].forEach(el => el.classList.remove('warning-glow'))
-      checkpointNameDisplay.textContent = ''
+      setCheckpointName('')
       hoursContainer.classList.remove('hidden')
       colon1.classList.remove('hidden')
     }
@@ -1139,18 +1297,25 @@
       secondsElement.textContent = pad(seconds)
     }
 
-    function startCountdown ({ targetTimestamp, backgroundData, finalText, checkpoints, checkpointEndTimes, showHours, warningTimeMs }) {
+    function startCountdown ({ targetTimestamp: ts, backgroundData, finalText, checkpoints, checkpointEndTimes: ends, showHours, warningTimeMs: warnMs }) {
       clearInterval(realTimeClockInterval)
       showCountdownState()
+      resetPauseState()
       hoursContainer.classList.toggle('hidden', !showHours)
       colon1.classList.toggle('hidden', !showHours)
+
+      // Store runtime state so pause/resume can access and shift it
+      targetTimestamp = ts
+      checkpointEndTimes = ends
+      currentCheckpoints = checkpoints
+      warningTimeMs = warnMs
 
       if (backgroundData) {
         currentBackgroundData = backgroundData
         applyBackground()
       }
 
-      countdownInterval = setInterval(() => {
+      function tick () {
         const now = new Date().getTime()
         const overallDistance = targetTimestamp - now
 
@@ -1170,19 +1335,22 @@
           finishedMessagePanel.classList.remove('hidden')
           countdownActions.classList.add('hidden')
           fullscreenButton.classList.add('hidden')
-          checkpointNameDisplay.textContent = ''
+          setCheckpointName('')
+          resetPauseState()
           clearLocalStorage()
           return
         }
 
-
         let currentCheckpointIndex = checkpointEndTimes.findIndex(endTime => now < endTime)
+        let checkpointDistance = 0
+        let isSeparate = false
 
         if (currentCheckpointIndex !== -1) {
-          let currentCheckpoint = checkpoints[currentCheckpointIndex]
-          let checkpointDistance = checkpointEndTimes[currentCheckpointIndex] - now
+          const currentCheckpoint = currentCheckpoints[currentCheckpointIndex]
+          checkpointDistance = checkpointEndTimes[currentCheckpointIndex] - now
+          isSeparate = displayMode === 'separate'
 
-          checkpointNameDisplay.textContent = currentCheckpoint.name
+          setCheckpointName(currentCheckpoint.name)
 
           if (checkpointDistance <= warningTimeMs) {
             [hoursElement, minutesElement, secondsElement, checkpointNameDisplay].forEach(el => el.classList.add('warning-glow'))
@@ -1191,21 +1359,66 @@
             [hoursElement, minutesElement, secondsElement, checkpointNameDisplay].forEach(el => el.classList.remove('warning-glow'))
           }
         } else {
-          checkpointNameDisplay.textContent = '';
+          setCheckpointName('');
           [hoursElement, minutesElement, secondsElement, checkpointNameDisplay].forEach(el => el.classList.remove('warning-glow'))
         }
 
+        // 'combined' = total time remaining across all checkpoints (default)
+        // 'separate' = only the current checkpoint's remaining time
+        const displayDistance = isSeparate ? checkpointDistance : overallDistance
+
         // Display logic for the main timer numbers
         if (showHours) {
-          hoursElement.textContent = pad(Math.floor(overallDistance / (1000 * 60 * 60)))
-          minutesElement.textContent = pad(Math.floor((overallDistance % (1000 * 60 * 60)) / (1000 * 60)))
-          secondsElement.textContent = pad(Math.floor((overallDistance % (1000 * 60)) / 1000))
+          hoursElement.textContent = pad(Math.floor(displayDistance / (1000 * 60 * 60)))
+          minutesElement.textContent = pad(Math.floor((displayDistance % (1000 * 60 * 60)) / (1000 * 60)))
+          secondsElement.textContent = pad(Math.floor((displayDistance % (1000 * 60)) / 1000))
         } else {
-          minutesElement.textContent = pad(Math.floor(overallDistance / (1000 * 60)))
-          secondsElement.textContent = pad(Math.floor((overallDistance % (1000 * 60)) / 1000))
+          minutesElement.textContent = pad(Math.floor(displayDistance / (1000 * 60)))
+          secondsElement.textContent = pad(Math.floor((displayDistance % (1000 * 60)) / 1000))
         }
+      }
 
-      }, 1000)
+      countdownTick = tick
+      countdownInterval = setInterval(tick, 1000)
+      tick() // render immediately
+    }
+
+    // --- Pause / Resume (temporary freeze, useful for timers with breaks) ---
+    function resetPauseState () {
+      paused = false
+      pausedAt = null
+      pauseButton.innerHTML = '<i class="fas fa-pause"></i>'
+      pauseButton.title = 'Pause'
+      pausedIndicator.classList.add('hidden')
+    }
+
+    function pauseCountdown () {
+      if (paused) return
+      paused = true
+      pausedAt = Date.now()
+      clearInterval(countdownInterval)
+      beepSound.pause()
+      // Persist the frozen state so a page reload keeps the timer paused
+      saveToLocalStorage({ countdownTarget: targetTimestamp, checkpointEndTimes, paused: true })
+      pauseButton.innerHTML = '<i class="fas fa-play"></i>'
+      pauseButton.title = 'Resume'
+      pausedIndicator.classList.remove('hidden')
+    }
+
+    function resumeCountdown () {
+      if (!paused) return
+      const now = Date.now()
+      const pauseDuration = now - pausedAt
+      paused = false
+      pausedAt = null
+      // Shift all absolute end times forward by the paused duration
+      targetTimestamp += pauseDuration
+      checkpointEndTimes = checkpointEndTimes.map(endTime => endTime + pauseDuration)
+      saveToLocalStorage({ countdownTarget: targetTimestamp, checkpointEndTimes, paused: false })
+      pauseButton.innerHTML = '<i class="fas fa-pause"></i>'
+      pauseButton.title = 'Pause'
+      pausedIndicator.classList.add('hidden')
+      countdownInterval = setInterval(countdownTick, 1000)
     }
 
     function toggleFullscreen () {
@@ -1222,11 +1435,20 @@
     function toggleAdvancedMode (showAdvanced) {
       advancedConfigPanel.classList.toggle('hidden', !showAdvanced)
       basicInputs.classList.toggle('hidden', showAdvanced)
+      advancedChevron.classList.toggle('rotate-180', showAdvanced)
+      advancedToggleButton.setAttribute('aria-expanded', showAdvanced ? 'true' : 'false')
       saveToLocalStorage({ mode: showAdvanced ? 'advanced' : 'basic' })
     }
 
     advancedToggleButton.addEventListener('click', () => toggleAdvancedMode(true))
     exitAdvancedButton.addEventListener('click', () => toggleAdvancedMode(false))
+
+    optionsToggleButton.addEventListener('click', () => {
+      const isOpen = !optionsPanel.classList.contains('hidden')
+      optionsPanel.classList.toggle('hidden', isOpen)
+      optionsChevron.classList.toggle('rotate-180', !isOpen)
+      optionsToggleButton.setAttribute('aria-expanded', String(!isOpen))
+    })
 
     addCheckpointButton.addEventListener('click', () => addCheckpointRow())
 
@@ -1235,6 +1457,15 @@
         checkpointsList.innerHTML = ''
         saveCheckpointsFromUI()
       }
+    })
+
+    checkpointDisplayModeInputs.forEach(input => {
+      input.addEventListener('change', () => {
+        if (input.checked) {
+          displayMode = input.value
+          saveToLocalStorage({ checkpointDisplayMode: displayMode })
+        }
+      })
     })
 
     startButton.addEventListener('click', () => {
@@ -1316,12 +1547,20 @@
       beepSound.pause()
       beepSound.currentTime = 0
       clearLocalStorage()
+      resetPauseState()
       startRealTimeClock()
     })
 
     restartButton.addEventListener('click', startRealTimeClock)
     changeBackgroundButton.addEventListener('click', () => backgroundImageInput.click())
     fullscreenButton.addEventListener('click', toggleFullscreen)
+    pauseButton.addEventListener('click', () => {
+      if (paused) {
+        resumeCountdown()
+      } else {
+        pauseCountdown()
+      }
+    })
     countdownHoursInput.addEventListener('input', () => { updateDisplayFromInput(); saveBasicDuration() })
     countdownMinutesInput.addEventListener('input', () => { updateDisplayFromInput(); saveBasicDuration() })
     countdownSecondsInput.addEventListener('input', () => { updateDisplayFromInput(); saveBasicDuration() })
@@ -1352,6 +1591,13 @@
 
     qsGlowColor.addEventListener('input', () => {
       settings.glowColor = qsGlowColor.value
+      applyNumberColors()
+      saveQuickSettings()
+    })
+
+    qsGlowSpread.addEventListener('input', () => {
+      settings.glowSpread = parseInt(qsGlowSpread.value) || 0
+      qsGlowSpreadValue.textContent = settings.glowSpread
       applyNumberColors()
       saveQuickSettings()
     })
@@ -1429,6 +1675,12 @@
       const savedMode = data.mode || (uiCheckpoints && uiCheckpoints.length > 0 ? 'advanced' : 'basic')
       toggleAdvancedMode(savedMode === 'advanced')
 
+      // Restore the checkpoint display mode preference (combined | separate)
+      if (data.checkpointDisplayMode === 'separate' || data.checkpointDisplayMode === 'combined') {
+        displayMode = data.checkpointDisplayMode
+      }
+      checkpointDisplayModeInputs.forEach(input => { input.checked = input.value === displayMode })
+
       if (data.targetTimestamp && data.targetTimestamp > new Date().getTime()) {
         hasInteracted = true
         const totalDuration = data.checkpoints ? data.checkpoints.reduce((acc, cp) => acc + cp.duration, 0) : (data.targetTimestamp - new Date().getTime())
@@ -1437,6 +1689,15 @@
         const warningS = data.warningTime ? data.warningTime.s : 10
         data.warningTimeMs = (warningM * 60 + warningS) * 1000
         startCountdown(data)
+        // Restore a paused countdown if the user had paused before reloading
+        if (data.paused) {
+          paused = true
+          pausedAt = Date.now()
+          clearInterval(countdownInterval)
+          pauseButton.innerHTML = '<i class="fas fa-play"></i>'
+          pauseButton.title = 'Resume'
+          pausedIndicator.classList.remove('hidden')
+        }
       } else {
         clearLocalStorage() // Clear any expired countdown data
         startRealTimeClock()
